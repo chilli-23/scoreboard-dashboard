@@ -192,7 +192,7 @@ def dashboard_page():
 
     # --- Main Page Filters ---
     with st.expander("🔍 Show/Hide Filters", expanded=True):
-        filter_cols = st.columns(3)
+        filter_cols = st.columns(2)
         
         with filter_cols[0]:
             # Date range filter
@@ -220,12 +220,6 @@ def dashboard_page():
             selected_systems = st.multiselect("Filter by System", system_values, default=system_values)
             df_filtered = df_filtered[df_filtered["SYSTEM"].isin(selected_systems)]
 
-        with filter_cols[2]:
-            # Equipment filter
-            equip_values = sorted(df_filtered["EQUIPMENT DESCRIPTION"].dropna().unique())
-            selected_equips = st.multiselect("Filter by Equipment", equip_values, default=equip_values)
-            df_filtered = df_filtered[df_filtered["EQUIPMENT DESCRIPTION"].isin(selected_equips)]
-
     if df_filtered.empty:
         st.warning("No data matches your filter criteria. Please adjust the filters.")
         st.stop()
@@ -245,17 +239,6 @@ def dashboard_page():
         area_scores = sys_scores.groupby("AREA")["EQUIP_SCORE"].min().reset_index()
         area_scores["AREA_STATUS"] = area_scores["EQUIP_SCORE"].apply(score_to_status)
 
-    # --- Display KPIs ---
-    st.subheader("Dashboard Summary")
-    kpi_cols = st.columns(4)
-    kpi_cols[0].metric("Equipments (filtered)", len(df_filtered))
-    kpi_cols[1].metric("Systems (filtered)", sys_scores["SYSTEM"].nunique())
-    kpi_cols[2].metric("Areas (filtered)", area_scores["AREA"].nunique())
-    status_counts = df_filtered['EQUIP_STATUS'].value_counts()
-    red_count = status_counts.get('RED', 0)
-    amber_count = status_counts.get('AMBER', 0)
-    green_count = status_counts.get('GREEN', 0)
-    kpi_cols[3].metric("Equip RED | AMBER | GREEN", f"{red_count} | {amber_count} | {green_count}")
     st.divider()
 
     # --- Display Data Tables ---
@@ -271,13 +254,17 @@ def dashboard_page():
     )
     st.subheader("Equipment Details")
     cols_to_show = [
-        "AREA", "SYSTEM", "EQUIPMENT DESCRIPTION", "DATE", "EQUIP_STATUS", "EQUIP_SCORE",
+        "EQUIPMENT DESCRIPTION", "EQUIP_STATUS", "EQUIP_SCORE",
         "VIBRATION", "OIL ANALYSIS", "TEMPERATURE", "OTHER INSPECTION"
     ]
     existing_cols_to_show = [c for c in cols_to_show if c in df_filtered.columns]
     equip_view = df_filtered[existing_cols_to_show].sort_values(
-        ["AREA", "SYSTEM", "EQUIPMENT DESCRIPTION", "DATE"], na_position="last"
+        ["EQUIPMENT DESCRIPTION"], na_position="last"
     )
+    
+    # Format the score to be an integer
+    equip_view['EQUIP_SCORE'] = equip_view['EQUIP_SCORE'].apply(lambda x: int(x) if pd.notna(x) else '')
+
     st.dataframe(
         equip_view.style.applymap(color_status_cell, subset=["EQUIP_STATUS"]),
         use_container_width=True, hide_index=True
