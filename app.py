@@ -188,35 +188,46 @@ def dashboard_page():
         st.stop()
 
     df = st.session_state.df.copy()
-
-    # --- Sidebar Filters ---
-    st.sidebar.header("🔍 Filters")
-    
     df_filtered = df.copy()
 
-    # Date range filter
-    if df_filtered["DATE"].notna().any():
-        min_date = df_filtered["DATE"].min().date()
-        max_date = df_filtered["DATE"].max().date()
-        start_date, end_date = st.sidebar.date_input(
-            "Date range",
-            [min_date, max_date],
-            min_value=min_date,
-            max_value=max_date,
-        )
-        date_mask = (df_filtered["DATE"].dt.date >= start_date) & (df_filtered["DATE"].dt.date <= end_date)
-        df_filtered = df_filtered[date_mask]
-    else:
-        st.sidebar.caption("No valid dates found; skipping date filter.")
+    # --- Main Page Filters ---
+    with st.expander("🔍 Show/Hide Filters", expanded=True):
+        filter_cols = st.columns(3)
+        
+        with filter_cols[0]:
+            # Date range filter
+            if df["DATE"].notna().any():
+                min_date = df["DATE"].min().date()
+                max_date = df["DATE"].max().date()
+                start_date, end_date = st.date_input(
+                    "Filter by Date Range",
+                    [min_date, max_date],
+                    min_value=min_date,
+                    max_value=max_date,
+                )
+                date_mask = (df_filtered["DATE"].dt.date >= start_date) & (df_filtered["DATE"].dt.date <= end_date)
+                df_filtered = df_filtered[date_mask]
+            else:
+                st.caption("No valid dates found for filtering.")
 
-    # Categorical filters
-    for col in ["AREA", "SYSTEM", "EQUIPMENT DESCRIPTION"]:
-        unique_values = sorted(df_filtered[col].dropna().unique())
-        selected_values = st.sidebar.multiselect(col, unique_values, default=unique_values)
-        df_filtered = df_filtered[df_filtered[col].isin(selected_values)]
+        with filter_cols[1]:
+            # Area and System filters
+            area_values = sorted(df_filtered["AREA"].dropna().unique())
+            selected_areas = st.multiselect("Filter by Area", area_values, default=area_values)
+            df_filtered = df_filtered[df_filtered["AREA"].isin(selected_areas)]
+            
+            system_values = sorted(df_filtered["SYSTEM"].dropna().unique())
+            selected_systems = st.multiselect("Filter by System", system_values, default=system_values)
+            df_filtered = df_filtered[df_filtered["SYSTEM"].isin(selected_systems)]
+
+        with filter_cols[2]:
+            # Equipment filter
+            equip_values = sorted(df_filtered["EQUIPMENT DESCRIPTION"].dropna().unique())
+            selected_equips = st.multiselect("Filter by Equipment", equip_values, default=equip_values)
+            df_filtered = df_filtered[df_filtered["EQUIPMENT DESCRIPTION"].isin(selected_equips)]
 
     if df_filtered.empty:
-        st.warning("No data matches your filter criteria. Please adjust the filters in the sidebar.")
+        st.warning("No data matches your filter criteria. Please adjust the filters.")
         st.stop()
 
     # --- Scoring Logic ---
