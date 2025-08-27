@@ -242,15 +242,23 @@ def dashboard_page():
 
 # --- Main Application Logic ---
 
-# Initialize session state to store the dataframe
+# Initialize session state for the dataframe and the current page
 if 'df' not in st.session_state:
     st.session_state.df = None
+if 'page' not in st.session_state:
+    st.session_state.page = "Upload Data" # Set a default page
 
 # Sidebar Navigation
 st.sidebar.title("Navigation")
-page = st.sidebar.radio("Choose a page", ["Upload Data", "Dashboard"])
 
-if page == "Upload Data":
+# When a button is clicked, it returns True for one run. We use this to update the page state.
+if st.sidebar.button("📂 Upload Data"):
+    st.session_state.page = "Upload Data"
+if st.sidebar.button("📊 Dashboard"):
+    st.session_state.page = "Dashboard"
+
+# Display the selected page based on the value in session state
+if st.session_state.page == "Upload Data":
     upload_page()
-elif page == "Dashboard":
+elif st.session_state.page == "Dashboard":
     dashboard_page()
