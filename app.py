@@ -5,6 +5,37 @@ from io import BytesIO
 # --- Page Configuration ---
 st.set_page_config(page_title="Equipment Condition Dashboard", layout="wide")
 
+# --- Custom CSS to make sidebar buttons look like links ---
+st.markdown("""
+<style>
+    /* Target buttons within the sidebar */
+    [data-testid="stSidebar"] button {
+        background: none !important;
+        border: none;
+        padding: 0 !important;
+        margin: 0 !important;
+        font-size: 1rem; /* Match Streamlit's default font size */
+        color: white !important; /* Set text color */
+        text-decoration: none;
+        cursor: pointer;
+        text-align: left;
+        width: 100%;
+        margin-bottom: 0.5rem; /* Add space between the links */
+    }
+    /* Add a hover effect */
+    [data-testid="stSidebar"] button:hover {
+        text-decoration: underline;
+        color: #FF4B4B !important; /* Streamlit's accent color for hover */
+    }
+    /* Remove the default focus outline */
+    [data-testid="stSidebar"] button:focus {
+        outline: none !important;
+        box-shadow: none !important;
+    }
+</style>
+""", unsafe_allow_html=True)
+
+
 # --- Constants ---
 # Define required columns to ensure the uploaded file is correct.
 REQUIRED_COLS = {
