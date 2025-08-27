@@ -111,8 +111,21 @@ def color_status_cell(status: str):
 # --- Page Implementations ---
 
 def upload_page():
-    """Defines the content of the file upload page."""
+    """Defines the content of the file upload page, protected by a password."""
     st.title("📂 Upload Data")
+
+    # --- Password Protection ---
+    if not st.session_state.get("authenticated", False):
+        password = st.text_input("Enter Password to Upload", type="password")
+        if password:
+            if password == "123456": # Test password
+                st.session_state.authenticated = True
+                st.rerun() # Rerun the script to show the uploader
+            else:
+                st.error("Incorrect password.")
+        st.stop() # Stop execution if not authenticated
+
+    # --- File Uploader (only shown if authenticated) ---
     st.info("Please upload your Excel file to begin. The sheet must be named 'Scorecard'.")
     
     uploaded_file = st.file_uploader(
@@ -132,6 +145,8 @@ def upload_page():
             # Store the processed dataframe in the session state
             st.session_state.df = df
             st.success("✅ File processed successfully! Navigate to the Dashboard to view the data.")
+            # Reset authentication after successful upload
+            st.session_state.authenticated = False
 
 def dashboard_page():
     """Defines the content of the main dashboard page."""
@@ -242,11 +257,13 @@ def dashboard_page():
 
 # --- Main Application Logic ---
 
-# Initialize session state for the dataframe and the current page
+# Initialize session state for the dataframe, current page, and authentication status
 if 'df' not in st.session_state:
     st.session_state.df = None
 if 'page' not in st.session_state:
-    st.session_state.page = "Upload Data" # Set a default page
+    st.session_state.page = "Dashboard" # Default to dashboard
+if 'authenticated' not in st.session_state:
+    st.session_state.authenticated = False
 
 # Sidebar Navigation
 st.sidebar.title("Navigation")
@@ -254,8 +271,13 @@ st.sidebar.title("Navigation")
 # When a button is clicked, it returns True for one run. We use this to update the page state.
 if st.sidebar.button("📂 Upload Data"):
     st.session_state.page = "Upload Data"
+    # When navigating to upload, reset authentication
+    st.session_state.authenticated = False
+    st.rerun()
+
 if st.sidebar.button("📊 Dashboard"):
     st.session_state.page = "Dashboard"
+    st.rerun()
 
 # Display the selected page based on the value in session state
 if st.session_state.page == "Upload Data":
