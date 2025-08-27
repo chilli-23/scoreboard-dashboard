@@ -199,9 +199,10 @@ def dashboard_page():
             if df["DATE"].notna().any():
                 min_date = df["DATE"].min().date()
                 max_date = df["DATE"].max().date()
+                # Default the date range to only the latest date
                 start_date, end_date = st.date_input(
                     "Filter by Date Range",
-                    [min_date, max_date],
+                    [max_date, max_date], # Default to latest date
                     min_value=min_date,
                     max_value=max_date,
                 )
@@ -217,8 +218,13 @@ def dashboard_page():
             df_filtered = df_filtered[df_filtered["AREA"].isin(selected_areas)]
             
             system_values = sorted(df_filtered["SYSTEM"].dropna().unique())
-            selected_systems = st.multiselect("Filter by System", system_values, default=system_values)
-            df_filtered = df_filtered[df_filtered["SYSTEM"].isin(selected_systems)]
+            # Add an "All Systems" option to the beginning of the list
+            system_options = ["All Systems"] + system_values
+            selected_system = st.selectbox("Filter by System", system_options)
+            
+            # Apply the filter only if a specific system is chosen
+            if selected_system != "All Systems":
+                df_filtered = df_filtered[df_filtered["SYSTEM"] == selected_system]
 
     if df_filtered.empty:
         st.warning("No data matches your filter criteria. Please adjust the filters.")
@@ -243,12 +249,14 @@ def dashboard_page():
 
     # --- Display Data Tables ---
     st.subheader("Area Status")
+    # Format the score to be an integer before displaying
     area_scores['EQUIP_SCORE'] = area_scores['EQUIP_SCORE'].apply(lambda x: int(x) if pd.notna(x) else '')
     st.dataframe(
         area_scores.style.applymap(color_status_cell, subset=["AREA_STATUS"]),
         use_container_width=True, hide_index=True
     )
     st.subheader("System Status")
+    # Format the score to be an integer before displaying
     sys_scores['EQUIP_SCORE'] = sys_scores['EQUIP_SCORE'].apply(lambda x: int(x) if pd.notna(x) else '')
     st.dataframe(
         sys_scores.style.applymap(color_status_cell, subset=["SYSTEM_STATUS"]),
@@ -315,4 +323,3 @@ if st.session_state.page == "Upload Data":
     upload_page()
 elif st.session_state.page == "Dashboard":
     dashboard_page()
-
