@@ -243,11 +243,13 @@ def dashboard_page():
 
     # --- Display Data Tables ---
     st.subheader("Area Status")
+    area_scores['EQUIP_SCORE'] = area_scores['EQUIP_SCORE'].apply(lambda x: int(x) if pd.notna(x) else '')
     st.dataframe(
         area_scores.style.applymap(color_status_cell, subset=["AREA_STATUS"]),
         use_container_width=True, hide_index=True
     )
     st.subheader("System Status")
+    sys_scores['EQUIP_SCORE'] = sys_scores['EQUIP_SCORE'].apply(lambda x: int(x) if pd.notna(x) else '')
     st.dataframe(
         sys_scores.style.applymap(color_status_cell, subset=["SYSTEM_STATUS"]),
         use_container_width=True, hide_index=True
@@ -313,3 +315,4 @@ if st.session_state.page == "Upload Data":
     upload_page()
 elif st.session_state.page == "Dashboard":
     dashboard_page()
+
