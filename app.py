@@ -58,13 +58,18 @@ def main():
     # Clean up column names
     df.columns = [col.strip().upper() for col in df.columns]
 
-    # --- DIRECTLY USE THE SCORE FROM EXCEL ---
-    # Rename the score column for easier use and ensure it's a numeric type
-    if "CONDITION MONITORING SCORE" not in df.columns:
+    # --- DIRECTLY USE THE SCORE FROM EXCEL (IMPROVED) ---
+    # Check for the column name with and without a line break
+    score_col_name_linebreak = "CONDITION MONITORING \nSCORE"
+    score_col_name_singleline = "CONDITION MONITORING SCORE"
+
+    if score_col_name_linebreak in df.columns:
+        df = df.rename(columns={score_col_name_linebreak: "SCORE"})
+    elif score_col_name_singleline in df.columns:
+        df = df.rename(columns={score_col_name_singleline: "SCORE"})
+    else:
         st.error("Error: A column named 'CONDITION MONITORING SCORE' was not found in your file.")
         return
-        
-    df = df.rename(columns={"CONDITION MONITORING SCORE": "SCORE"})
     
     # Convert score to a number, coercing errors to 'Not a Number' (NaN)
     df["SCORE"] = pd.to_numeric(df["SCORE"], errors='coerce')
@@ -143,17 +148,17 @@ def main():
                     st.plotly_chart(fig, use_container_width=True)
     
     # ======================
-    # 📍 TABLES
+    # 📍 TABLES (UPDATED)
     # ======================
     st.subheader("Area Status (Lowest Score)")
-    st.dataframe(area_scores.style.applymap(color_score, subset=["SCORE"]), use_container_width=True)
+    st.dataframe(area_scores.style.map(color_score, subset=["SCORE"]).hide(axis="index"))
 
     st.subheader("System Status (Lowest Score)")
     system_scores["STATUS"] = system_scores["SCORE"].apply(map_status)
-    st.dataframe(system_scores.style.applymap(color_status, subset=["STATUS"]), use_container_width=True)
+    st.dataframe(system_scores.style.map(color_status, subset=["STATUS"]).hide(axis="index"))
     
     # ======================
-    # 🔎 INTERACTIVE EXPLORER
+    # 🔎 INTERACTIVE EXPLORER (UPDATED)
     # ======================
     st.subheader("Explore Equipment by System")
     selected_system = st.selectbox("Select a System:", sorted(df["SYSTEM"].unique()))
@@ -169,8 +174,7 @@ def main():
         display_cols = [col for col in display_cols if col in filtered_df.columns]
         
         st.dataframe(
-            filtered_df[display_cols].style.applymap(color_score, subset=["SCORE"]),
-            use_container_width=True
+            filtered_df[display_cols].style.map(color_score, subset=["SCORE"]).hide(axis="index")
         )
 
     # ======================
@@ -182,14 +186,15 @@ def main():
     trend_systems = sorted(df["SYSTEM"].unique())
     if trend_systems:
         selected_system_trend = st.selectbox("Select System for Trend Line:", trend_systems)
-        trend_df_filtered = trend_df[trend_df["SYSTEM"] == selected_system_trend]
+        if selected_system_trend:
+            trend_df_filtered = trend_df[trend_df["SYSTEM"] == selected_system_trend]
 
-        fig_trend = px.line(
-            trend_df_filtered, x="DATE", y="SCORE", markers=True,
-            title=f"Performance Trend for {selected_system_trend}"
-        )
-        fig_trend.update_layout(yaxis=dict(title="Score", range=[0.5, 3.5], dtick=1))
-        st.plotly_chart(fig_trend, use_container_width=True)
+            fig_trend = px.line(
+                trend_df_filtered, x="DATE", y="SCORE", markers=True,
+                title=f"Performance Trend for {selected_system_trend}"
+            )
+            fig_trend.update_layout(yaxis=dict(title="Score", range=[0.5, 3.5], dtick=1))
+            st.plotly_chart(fig_trend, use_container_width=True)
 
 
 if __name__ == "__main__":
