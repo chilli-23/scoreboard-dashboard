@@ -117,6 +117,30 @@ def main():
     system_scores = df.groupby(["AREA", "SYSTEM"])["SCORE"].min().reset_index()
     area_scores = system_scores.groupby("AREA")["SCORE"].min().reset_index()
 
+     # ======================
+    # 🥧 PIE CHARTS
+    # ======================
+    st.subheader("Equipment Status Distribution per AREA")
+    area_dist = df.groupby(["AREA", "EQUIP_STATUS"])["EQUIPMENT DESCRIPTION"].count().reset_index(name="COUNT")
+    areas = sorted(area_dist["AREA"].unique())
+
+    cols_per_row = 3
+    for i in range(0, len(areas), cols_per_row):
+        cols = st.columns(cols_per_row)
+        for j, area in enumerate(areas[i:i+cols_per_row]):
+            if j < len(cols):
+                with cols[j]:
+                    st.markdown(f"**{area}**")
+                    area_data = area_dist[area_dist["AREA"] == area]
+                    fig = px.pie(
+                        area_data, names="EQUIP_STATUS", values="COUNT",
+                        color="EQUIP_STATUS",
+                        color_discrete_map={"Need Action": "red", "Caution": "yellow", "Okay": "green"},
+                        hole=0.4
+                    )
+                    fig.update_layout(showlegend=False, margin=dict(t=20, b=20, l=20, r=20))
+                    st.plotly_chart(fig, use_container_width=True)
+
     # ======================
     # 📊 BAR CHARTS
     # ======================
@@ -142,29 +166,7 @@ def main():
     fig_system.update_layout(yaxis=dict(title="Score", range=[0, 3.5], dtick=1), xaxis=dict(tickangle=-45))
     st.plotly_chart(fig_system, use_container_width=True)
 
-    # ======================
-    # 🥧 PIE CHARTS
-    # ======================
-    st.subheader("Equipment Status Distribution per AREA")
-    area_dist = df.groupby(["AREA", "EQUIP_STATUS"])["EQUIPMENT DESCRIPTION"].count().reset_index(name="COUNT")
-    areas = sorted(area_dist["AREA"].unique())
-
-    cols_per_row = 3
-    for i in range(0, len(areas), cols_per_row):
-        cols = st.columns(cols_per_row)
-        for j, area in enumerate(areas[i:i+cols_per_row]):
-            if j < len(cols):
-                with cols[j]:
-                    st.markdown(f"**{area}**")
-                    area_data = area_dist[area_dist["AREA"] == area]
-                    fig = px.pie(
-                        area_data, names="EQUIP_STATUS", values="COUNT",
-                        color="EQUIP_STATUS",
-                        color_discrete_map={"Need Action": "red", "Caution": "yellow", "Okay": "green"},
-                        hole=0.4
-                    )
-                    fig.update_layout(showlegend=False, margin=dict(t=20, b=20, l=20, r=20))
-                    st.plotly_chart(fig, use_container_width=True)
+   
     
     # ======================
     # 📍 TABLES (UPDATED)
@@ -224,3 +226,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
