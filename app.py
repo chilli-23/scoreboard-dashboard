@@ -117,7 +117,23 @@ def main():
     system_scores = df.groupby(["AREA", "SYSTEM"])["SCORE"].min().reset_index()
     area_scores = system_scores.groupby("AREA")["SCORE"].min().reset_index()
 
-     # ======================
+     
+
+    # ======================
+    # 📊 BAR CHARTS (AREA)
+    # ======================
+    st.subheader("AREA Score Distribution")
+    fig_area = px.bar(
+        area_scores, x="AREA", y="SCORE",
+        color=area_scores["SCORE"].astype(str),
+        text="SCORE",
+        color_discrete_map={"3": "green", "2": "yellow", "1": "red"},
+        title="Lowest Score per AREA"
+    )
+    fig_area.update_layout(yaxis=dict(title="Score", range=[0, 3.5], dtick=1))
+    st.plotly_chart(fig_area, use_container_width=True)
+
+    # ======================
     # 🥧 PIE CHARTS
     # ======================
     st.subheader("Equipment Status Distribution per AREA")
@@ -141,20 +157,10 @@ def main():
                     fig.update_layout(showlegend=False, margin=dict(t=20, b=20, l=20, r=20))
                     st.plotly_chart(fig, use_container_width=True)
 
+    
+     # ======================
+    # 📊 BAR CHARTS (SYSTEM)
     # ======================
-    # 📊 BAR CHARTS
-    # ======================
-    st.subheader("AREA Score Distribution")
-    fig_area = px.bar(
-        area_scores, x="AREA", y="SCORE",
-        color=area_scores["SCORE"].astype(str),
-        text="SCORE",
-        color_discrete_map={"3": "green", "2": "yellow", "1": "red"},
-        title="Lowest Score per AREA"
-    )
-    fig_area.update_layout(yaxis=dict(title="Score", range=[0, 3.5], dtick=1))
-    st.plotly_chart(fig_area, use_container_width=True)
-
     st.subheader("SYSTEM Score Distribution")
     fig_system = px.bar(
         system_scores, x="SYSTEM", y="SCORE",
@@ -226,4 +232,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
