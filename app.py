@@ -78,20 +78,19 @@ def main():
     df["DATE"] = pd.to_datetime(df["DATE"], errors='coerce')
     df.dropna(subset=['AREA', 'SYSTEM', 'EQUIPMENT DESCRIPTION', 'DATE', 'SCORE'], inplace=True)
     
+    # --- NEW: PROCESS ONLY THE LATEST ENTRY FOR EACH EQUIPMENT ---
+    st.info("Displaying the latest available score for each piece of equipment.")
+    df = df.sort_values(by="DATE", ascending=False)
+    df = df.drop_duplicates(subset=["EQUIPMENT DESCRIPTION"], keep="first")
+
     # Convert score to integer
     df["SCORE"] = df["SCORE"].astype(int)
 
     # Create the text-based status column for the pie charts
     df["EQUIP_STATUS"] = df["SCORE"].apply(map_status)
 
-    # --- FILTERS ---
-    min_date, max_date = df["DATE"].min().date(), df["DATE"].max().date()
-    date_range = st.date_input("Select Date Range", [min_date, max_date])
-    if len(date_range) == 2:
-        df = df[(df["DATE"].dt.date >= date_range[0]) & (df["DATE"].dt.date <= date_range[1])]
-
     if df.empty:
-        st.warning("No data available for the selected date range.")
+        st.warning("No data available to display.")
         return
 
     # --- HIERARCHICAL AGGREGATION (using the score from Excel) ---
@@ -165,16 +164,20 @@ def main():
     if selected_system:
         filtered_df = df[df["SYSTEM"] == selected_system]
         
+        # --- NEW: Create a copy for display formatting ---
+        display_df = filtered_df.copy()
+        display_df["DATE"] = display_df["DATE"].dt.strftime('%d-%m-%Y')
+
         display_cols = [
             "AREA", "SYSTEM", "EQUIPMENT DESCRIPTION", "DATE", "SCORE",
             "VIBRATION", "OIL ANALYSIS", "TEMPERATURE", "OTHER INSPECTION",
             "FINDING", "ACTION PLAN"
         ]
         # Ensure only existing columns are displayed
-        display_cols = [col for col in display_cols if col in filtered_df.columns]
+        display_cols = [col for col in display_cols if col in display_df.columns]
         
         st.dataframe(
-            filtered_df[display_cols].style.map(color_score, subset=["SCORE"]).hide(axis="index")
+            display_df[display_cols].style.map(color_score, subset=["SCORE"]).hide(axis="index")
         )
 
     # ======================
