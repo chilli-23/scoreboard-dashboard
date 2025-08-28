@@ -78,10 +78,30 @@ def main():
     df["DATE"] = pd.to_datetime(df["DATE"], errors='coerce')
     df.dropna(subset=['AREA', 'SYSTEM', 'EQUIPMENT DESCRIPTION', 'DATE', 'SCORE'], inplace=True)
     
-    # --- NEW: PROCESS ONLY THE LATEST ENTRY FOR EACH EQUIPMENT ---
-    st.info("Displaying the latest available score for each piece of equipment.")
-    df = df.sort_values(by="DATE", ascending=False)
-    df = df.drop_duplicates(subset=["EQUIPMENT DESCRIPTION"], keep="first")
+    # --- NEW: OPTION TO CHOOSE FILTERING METHOD ---
+    st.markdown("---")
+    filter_option = st.radio(
+        "Choose a data filtering option:",
+        ("Display latest data only", "Select a date range"),
+        horizontal=True,
+        label_visibility="collapsed"
+    )
+
+    # Store the original full dataframe for the trend chart
+    df_original = df.copy()
+
+    if filter_option == "Display latest data only":
+        st.info("Displaying the latest available score for each piece of equipment.")
+        df = df.sort_values(by="DATE", ascending=False)
+        df = df.drop_duplicates(subset=["EQUIPMENT DESCRIPTION"], keep="first")
+    else: # "Select a date range"
+        min_date, max_date = df_original["DATE"].min().date(), df_original["DATE"].max().date()
+        date_range = st.date_input("Select Date Range", [min_date, max_date])
+        if len(date_range) == 2:
+            df = df_original[(df_original["DATE"].dt.date >= date_range[0]) & (df_original["DATE"].dt.date <= date_range[1])]
+        else:
+            # In case of an issue with date input, default to the full original dataframe
+            df = df_original
 
     # Convert score to integer
     df["SCORE"] = df["SCORE"].astype(int)
@@ -90,7 +110,7 @@ def main():
     df["EQUIP_STATUS"] = df["SCORE"].apply(map_status)
 
     if df.empty:
-        st.warning("No data available to display.")
+        st.warning("No data available for the selected filter.")
         return
 
     # --- HIERARCHICAL AGGREGATION (using the score from Excel) ---
@@ -184,8 +204,10 @@ def main():
     # 📈 PERFORMANCE TREND
     # ======================
     st.subheader("System Performance Trend Over Time")
-    trend_df = df.groupby(['DATE', 'SYSTEM'])['SCORE'].min().reset_index()
+    # Use the original, unfiltered dataframe to get the full history for the trend line
+    trend_df = df_original.groupby(['DATE', 'SYSTEM'])['SCORE'].min().reset_index()
     
+    # Use the currently filtered systems for the dropdown options
     trend_systems = sorted(df["SYSTEM"].unique())
     if trend_systems:
         selected_system_trend = st.selectbox("Select System for Trend Line:", trend_systems)
