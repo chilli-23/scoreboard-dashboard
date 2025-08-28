@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-
+from st_aggrid import AgGrid, GridOptionsBuilder, JsCode
 # =========================
 # Helper functions (for styling and status mapping)
 # =========================
@@ -9,11 +9,11 @@ import plotly.express as px
 def map_status(score):
     """Converts a numeric score (1, 2, 3) to a text status."""
     if score == 1:
-        return "Need Action"
+        return "RED"
     elif score == 2:
-        return "Caution"
+        return "AMBER"
     elif score == 3:
-        return "Okay"
+        return "GREEN"
     return "UNKNOWN"
 
 def color_score(val):
@@ -28,11 +28,11 @@ def color_score(val):
 
 def color_status(val):
     """Applies background color to a cell based on its text status."""
-    if val == "Need Action":
+    if val == "RED":
         return "background-color: red; color: white;"
-    elif val == "Caution":
-        return "background-color: yellow; color: black;"
-    elif val == "Okay":
+    elif val == "AMBER":
+        return "background-color: orange; color: black;"
+    elif val == "GREEN":
         return "background-color: green; color: white;"
     return ""
 
@@ -58,18 +58,13 @@ def main():
     # Clean up column names
     df.columns = [col.strip().upper() for col in df.columns]
 
-    # --- DIRECTLY USE THE SCORE FROM EXCEL (IMPROVED) ---
-    # Check for the column name with and without a line break
-    score_col_name_linebreak = "CONDITION MONITORING \nSCORE"
-    score_col_name_singleline = "CONDITION MONITORING SCORE"
-
-    if score_col_name_linebreak in df.columns:
-        df = df.rename(columns={score_col_name_linebreak: "SCORE"})
-    elif score_col_name_singleline in df.columns:
-        df = df.rename(columns={score_col_name_singleline: "SCORE"})
-    else:
+    # --- DIRECTLY USE THE SCORE FROM EXCEL ---
+    # Rename the score column for easier use and ensure it's a numeric type
+    if "CONDITION MONITORING SCORE" not in df.columns:
         st.error("Error: A column named 'CONDITION MONITORING SCORE' was not found in your file.")
         return
+        
+    df = df.rename(columns={"CONDITION MONITORING SCORE": "SCORE"})
     
     # Convert score to a number, coercing errors to 'Not a Number' (NaN)
     df["SCORE"] = pd.to_numeric(df["SCORE"], errors='coerce')
@@ -78,49 +73,29 @@ def main():
     df["DATE"] = pd.to_datetime(df["DATE"], errors='coerce')
     df.dropna(subset=['AREA', 'SYSTEM', 'EQUIPMENT DESCRIPTION', 'DATE', 'SCORE'], inplace=True)
     
-    # --- NEW: OPTION TO CHOOSE FILTERING METHOD ---
-    st.markdown("---")
-    filter_option = st.radio(
-        "Choose a data filtering option:",
-        ("Display latest data only", "Select a date range"),
-        horizontal=True,
-        label_visibility="collapsed"
-    )
-
-    # Store the original full dataframe for the trend chart
-    df_original = df.copy()
-
-    if filter_option == "Display latest data only":
-        st.info("Displaying the latest available score for each piece of equipment.")
-        df = df.sort_values(by="DATE", ascending=False)
-        df = df.drop_duplicates(subset=["EQUIPMENT DESCRIPTION"], keep="first")
-    else: # "Select a date range"
-        min_date, max_date = df_original["DATE"].min().date(), df_original["DATE"].max().date()
-        date_range = st.date_input("Select Date Range", [min_date, max_date])
-        if len(date_range) == 2:
-            df = df_original[(df_original["DATE"].dt.date >= date_range[0]) & (df_original["DATE"].dt.date <= date_range[1])]
-        else:
-            # In case of an issue with date input, default to the full original dataframe
-            df = df_original
-
     # Convert score to integer
     df["SCORE"] = df["SCORE"].astype(int)
 
     # Create the text-based status column for the pie charts
     df["EQUIP_STATUS"] = df["SCORE"].apply(map_status)
 
+    # --- FILTERS ---
+    min_date, max_date = df["DATE"].min().date(), df["DATE"].max().date()
+    date_range = st.date_input("Select Date Range", [min_date, max_date])
+    if len(date_range) == 2:
+        df = df[(df["DATE"].dt.date >= date_range[0]) & (df["DATE"].dt.date <= date_range[1])]
+
     if df.empty:
-        st.warning("No data available for the selected filter.")
+        st.warning("No data available for the selected date range.")
         return
+
 
     # --- HIERARCHICAL AGGREGATION (using the score from Excel) ---
     system_scores = df.groupby(["AREA", "SYSTEM"])["SCORE"].min().reset_index()
     area_scores = system_scores.groupby("AREA")["SCORE"].min().reset_index()
 
-     
-
     # ======================
-    # 📊 BAR CHARTS (AREA)
+    # 📊 BAR CHARTS
     # ======================
     st.subheader("AREA Score Distribution")
     fig_area = px.bar(
@@ -133,7 +108,7 @@ def main():
     fig_area.update_layout(yaxis=dict(title="Score", range=[0, 3.5], dtick=1))
     st.plotly_chart(fig_area, use_container_width=True)
 
-    # ======================
+     # ======================
     # 🥧 PIE CHARTS
     # ======================
     st.subheader("Equipment Status Distribution per AREA")
@@ -151,16 +126,13 @@ def main():
                     fig = px.pie(
                         area_data, names="EQUIP_STATUS", values="COUNT",
                         color="EQUIP_STATUS",
-                        color_discrete_map={"Need Action": "red", "Caution": "yellow", "Okay": "green"},
+                        color_discrete_map={"RED": "red", "AMBER": "orange", "GREEN": "green"},
                         hole=0.4
                     )
                     fig.update_layout(showlegend=False, margin=dict(t=20, b=20, l=20, r=20))
                     st.plotly_chart(fig, use_container_width=True)
-
     
-     # ======================
-    # 📊 BAR CHARTS (SYSTEM)
-    # ======================
+
     st.subheader("SYSTEM Score Distribution")
     fig_system = px.bar(
         system_scores, x="SYSTEM", y="SCORE",
@@ -172,18 +144,73 @@ def main():
     fig_system.update_layout(yaxis=dict(title="Score", range=[0, 3.5], dtick=1), xaxis=dict(tickangle=-45))
     st.plotly_chart(fig_system, use_container_width=True)
 
-   
-    
     # ======================
-    # 📍 TABLES (UPDATED)
+    # 📍 TABLES
     # ======================
     st.subheader("Area Status (Lowest Score)")
-    st.dataframe(area_scores.style.map(color_score, subset=["SCORE"]).hide(axis="index"))
+    st.dataframe(area_scores.style.applymap(color_score, subset=["SCORE"]), use_container_width=True)
 
-    st.subheader("System Status (Lowest Score)")
-    system_scores["STATUS"] = system_scores["SCORE"].apply(map_status)
-    st.dataframe(system_scores.style.map(color_status, subset=["STATUS"]).hide(axis="index"))
-    
+    # ======================
+    # 📍 SYSTEM STATUS TABLE WITH AgGrid (Pivot Style)
+    # ======================
+    from st_aggrid import AgGrid, GridOptionsBuilder, JsCode
+
+    st.subheader("System Status Explorer (AgGrid Pivot Style)")
+
+    # Prepare dataframe for AgGrid
+    aggrid_df = df.copy()
+    aggrid_df["STATUS"] = aggrid_df["SCORE"].apply(map_status)
+
+    # Keep only the needed columns
+    aggrid_df = aggrid_df[["SYSTEM", "EQUIPMENT DESCRIPTION", "DATE", "SCORE"]]
+
+    # Build grid options
+    gb = GridOptionsBuilder.from_dataframe(aggrid_df)
+
+    # Enable grouping
+    gb.configure_side_bar()
+    gb.configure_default_column(groupable=True)
+
+    # Group only by SYSTEM
+    gb.configure_column("SYSTEM", rowGroup=True, hide=True)
+
+    # Equipment description & date are shown only when expanded
+    gb.configure_column("EQUIPMENT DESCRIPTION", aggFunc=None, enableRowGroup=False)
+    gb.configure_column("DATE", aggFunc=None, enableRowGroup=False)
+
+    # Show SCORE as minimum per system in the collapsed row
+    gb.configure_column("SCORE", aggFunc="min")
+
+    # Cell coloring for SCORE
+    cell_style_jscode = JsCode("""
+    function(params) {
+        if (params.value == 1) {
+            return {'backgroundColor': 'red', 'color': 'white'};
+        }
+        if (params.value == 2) {
+            return {'backgroundColor': 'orange', 'color': 'black'};
+        }
+        if (params.value == 3) {
+            return {'backgroundColor': 'green', 'color': 'white'};
+        }
+        return null;
+    }
+    """)
+    gb.configure_column("SCORE", cellStyle=cell_style_jscode)
+
+    gridOptions = gb.build()
+
+    # Display AgGrid
+    AgGrid(
+        aggrid_df,
+        gridOptions=gridOptions,
+        enable_enterprise_modules=True,
+        allow_unsafe_jscode=True,
+        update_mode="MODEL_CHANGED",
+        fit_columns_on_grid_load=True,
+        height=500
+    )
+
     # ======================
     # 🔎 INTERACTIVE EXPLORER (UPDATED)
     # ======================
@@ -212,25 +239,20 @@ def main():
     # 📈 PERFORMANCE TREND
     # ======================
     st.subheader("System Performance Trend Over Time")
-    # Use the original, unfiltered dataframe to get the full history for the trend line
-    trend_df = df_original.groupby(['DATE', 'SYSTEM'])['SCORE'].min().reset_index()
+    trend_df = df.groupby(['DATE', 'SYSTEM'])['SCORE'].min().reset_index()
     
-    # Use the currently filtered systems for the dropdown options
     trend_systems = sorted(df["SYSTEM"].unique())
     if trend_systems:
         selected_system_trend = st.selectbox("Select System for Trend Line:", trend_systems)
-        if selected_system_trend:
-            trend_df_filtered = trend_df[trend_df["SYSTEM"] == selected_system_trend]
+        trend_df_filtered = trend_df[trend_df["SYSTEM"] == selected_system_trend]
 
-            fig_trend = px.line(
-                trend_df_filtered, x="DATE", y="SCORE", markers=True,
-                title=f"Performance Trend for {selected_system_trend}"
-            )
-            fig_trend.update_layout(yaxis=dict(title="Score", range=[0.5, 3.5], dtick=1))
-            st.plotly_chart(fig_trend, use_container_width=True)
+        fig_trend = px.line(
+            trend_df_filtered, x="DATE", y="SCORE", markers=True,
+            title=f"Performance Trend for {selected_system_trend}"
+        )
+        fig_trend.update_layout(yaxis=dict(title="Score", range=[0.5, 3.5], dtick=1))
+        st.plotly_chart(fig_trend, use_container_width=True)
 
 
 if __name__ == "__main__":
     main()
-
-
