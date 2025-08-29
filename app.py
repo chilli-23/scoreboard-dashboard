@@ -235,15 +235,14 @@ def main():
             """)
             gb_details.configure_column("SCORE", cellStyle=cell_style_jscode)
             
-            # Configure text wrapping for long text columns
-            gb_details.configure_column("FINDING", wrapText=True, autoHeight=True)
-            gb_details.configure_column("ACTION PLAN", wrapText=True, autoHeight=True)
+            # Configure column widths and text wrapping
+            gb_details.configure_column("EQUIPMENT DESCRIPTION", width=350)
+            gb_details.configure_column("FINDING", width=400, wrapText=True, autoHeight=True)
+            gb_details.configure_column("ACTION PLAN", width=400, wrapText=True, autoHeight=True)
             
             gridOptions_details = gb_details.build()
 
             # Calculate dynamic height for the table
-            # Header height is approx 40px, each row is approx 30px
-            # Add a buffer for wrapped text
             num_rows = len(detail_df)
             table_height = 100 + (num_rows * 35) 
             if num_rows > 10: # Cap the height to avoid excessive length
@@ -252,7 +251,7 @@ def main():
             AgGrid(
                 detail_df[display_cols],
                 gridOptions=gridOptions_details,
-                fit_columns_on_grid_load=True,
+                # fit_columns_on_grid_load is removed to allow content-based sizing
                 height=table_height,
                 theme="streamlit",
                 allow_unsafe_jscode=True
