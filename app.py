@@ -176,12 +176,7 @@ def main():
 
     gb = GridOptionsBuilder.from_dataframe(system_summary[["SYSTEM", "STATUS", "SCORE"]])
     gb.configure_selection(selection_mode="single", use_checkbox=False)
-    
-    # *** NEW LOGIC ADDED HERE ***
-    # This line enables full row selection highlighting
     gb.configure_selection(rowMultiSelectWithClick=False, suppressRowClickSelection=False)
-    # *** END OF NEW LOGIC ***
-
     gb.configure_default_column(resizable=True, filter=True, sortable=True)
     gridOptions = gb.build()
 
@@ -192,8 +187,7 @@ def main():
         update_mode=GridUpdateMode.SELECTION_CHANGED,
         fit_columns_on_grid_load=True,
         height=300,
-        # *** NEW THEME ADDED HERE ***
-        theme="streamlit" # Use a theme that provides better highlighting
+        theme="streamlit"
     )
 
     # --- Table 2: Equipment Details (only if a system is clicked) ---
@@ -225,10 +219,40 @@ def main():
             ]
             display_cols = [c for c in display_cols if c in detail_df.columns]
 
-            st.dataframe(
-                detail_df[display_cols].style.map(color_score, subset=["SCORE"]).hide(axis="index"),
-                use_container_width=True
+            # *** NEW LOGIC: Use AgGrid for Equipment Details Table ***
+            gb_details = GridOptionsBuilder.from_dataframe(detail_df[display_cols])
+            
+            # Configure selection to highlight the full row
+            gb_details.configure_selection(selection_mode="single", use_checkbox=False, rowMultiSelectWithClick=False, suppressRowClickSelection=False)
+
+            # Add cell styling for the 'SCORE' column using JsCode
+            cell_style_jscode = JsCode("""
+            function(params) {
+                if (params.value == 1) {
+                    return {'backgroundColor': 'red', 'color': 'white'};
+                }
+                if (params.value == 2) {
+                    return {'backgroundColor': 'yellow', 'color': 'black'};
+                }
+                if (params.value == 3) {
+                    return {'backgroundColor': 'green', 'color': 'white'};
+                }
+                return null;
+            }
+            """)
+            gb_details.configure_column("SCORE", cellStyle=cell_style_jscode)
+            
+            gridOptions_details = gb_details.build()
+
+            AgGrid(
+                detail_df[display_cols],
+                gridOptions=gridOptions_details,
+                fit_columns_on_grid_load=True,
+                height=400,
+                theme="streamlit",
+                allow_unsafe_jscode=True
             )
+            # *** END OF NEW LOGIC ***
 
             # ======================
             # 📈 PERFORMANCE TREND (NOW LINKED TO SELECTION)
