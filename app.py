@@ -177,7 +177,8 @@ def main():
     gb = GridOptionsBuilder.from_dataframe(system_summary[["SYSTEM", "STATUS", "SCORE"]])
     gb.configure_selection(selection_mode="single", use_checkbox=False)
     gb.configure_selection(rowMultiSelectWithClick=False, suppressRowClickSelection=False)
-    gb.configure_default_column(resizable=True, filter=True, sortable=True)
+    # *** UPDATED: Columns are no longer resizable by the user ***
+    gb.configure_default_column(resizable=False, filter=True, sortable=True)
     gridOptions = gb.build()
 
     grid_response = AgGrid(
@@ -213,27 +214,29 @@ def main():
             detail_df["STATUS"] = detail_df["SCORE"].apply(map_status)
 
             display_cols = [
-                "EQUIPMENT DESCRIPTION", "DATE", "SCORE", "STATUS",
-                "VIBRATION", "OIL ANALYSIS", "TEMPERATURE",
-                "OTHER INSPECTION", "FINDING", "ACTION PLAN"
+                "EQUIPMENT DESCRIPTION", "DATE", "SCORE",
+                "VIBRATION", "OIL ANALYSIS", "TEMPERATURE", "OTHER INSPECTION", "STATUS",
+                "FINDING", "ACTION PLAN"
             ]
             display_cols = [c for c in display_cols if c in detail_df.columns]
 
-            # *** UPDATED LOGIC: Use AgGrid for Equipment Details Table ***
             gb_details = GridOptionsBuilder.from_dataframe(detail_df[display_cols])
             
             gb_details.configure_selection(selection_mode="single", use_checkbox=False, rowMultiSelectWithClick=False, suppressRowClickSelection=False)
+            
+            # *** UPDATED: Columns are no longer resizable by the user ***
+            gb_details.configure_default_column(resizable=False)
 
-            # Add cell styling for the 'SCORE' column
+            # Add cell styling for the 'STATUS' column based on text
             cell_style_jscode = JsCode("""
             function(params) {
-                if (params.value == 1) { return {'backgroundColor': 'red', 'color': 'white'}; }
-                if (params.value == 2) { return {'backgroundColor': 'yellow', 'color': 'black'}; }
-                if (params.value == 3) { return {'backgroundColor': 'green', 'color': 'white'}; }
+                if (params.value == 'RED') { return {'backgroundColor': 'red', 'color': 'white'}; }
+                if (params.value == 'AMBER') { return {'backgroundColor': 'orange', 'color': 'black'}; }
+                if (params.value == 'GREEN') { return {'backgroundColor': 'green', 'color': 'white'}; }
                 return null;
             }
             """)
-            gb_details.configure_column("SCORE", cellStyle=cell_style_jscode)
+            gb_details.configure_column("STATUS", cellStyle=cell_style_jscode)
             
             # Configure column widths and text wrapping
             gb_details.configure_column("EQUIPMENT DESCRIPTION", width=350)
@@ -251,12 +254,10 @@ def main():
             AgGrid(
                 detail_df[display_cols],
                 gridOptions=gridOptions_details,
-                # fit_columns_on_grid_load is removed to allow content-based sizing
                 height=table_height,
                 theme="streamlit",
                 allow_unsafe_jscode=True
             )
-            # *** END OF UPDATED LOGIC ***
 
             # ======================
             # 📈 PERFORMANCE TREND (NOW LINKED TO SELECTION)
@@ -274,6 +275,8 @@ def main():
                     trend_df_filtered, x="DATE", y="SCORE", markers=True,
                     title=f"Performance Trend for {selected_system}"
                 )
+                # *** UPDATED: Format the x-axis date to dd/mm/yy ***
+                fig_trend.update_xaxes(tickformat="%d/%m/%y")
                 fig_trend.update_layout(yaxis=dict(title="Score", range=[0.5, 3.5], dtick=1))
                 st.plotly_chart(fig_trend, use_container_width=True)
             else:
