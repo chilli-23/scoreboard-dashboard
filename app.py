@@ -219,40 +219,45 @@ def main():
             ]
             display_cols = [c for c in display_cols if c in detail_df.columns]
 
-            # *** NEW LOGIC: Use AgGrid for Equipment Details Table ***
+            # *** UPDATED LOGIC: Use AgGrid for Equipment Details Table ***
             gb_details = GridOptionsBuilder.from_dataframe(detail_df[display_cols])
             
-            # Configure selection to highlight the full row
             gb_details.configure_selection(selection_mode="single", use_checkbox=False, rowMultiSelectWithClick=False, suppressRowClickSelection=False)
 
-            # Add cell styling for the 'SCORE' column using JsCode
+            # Add cell styling for the 'SCORE' column
             cell_style_jscode = JsCode("""
             function(params) {
-                if (params.value == 1) {
-                    return {'backgroundColor': 'red', 'color': 'white'};
-                }
-                if (params.value == 2) {
-                    return {'backgroundColor': 'yellow', 'color': 'black'};
-                }
-                if (params.value == 3) {
-                    return {'backgroundColor': 'green', 'color': 'white'};
-                }
+                if (params.value == 1) { return {'backgroundColor': 'red', 'color': 'white'}; }
+                if (params.value == 2) { return {'backgroundColor': 'yellow', 'color': 'black'}; }
+                if (params.value == 3) { return {'backgroundColor': 'green', 'color': 'white'}; }
                 return null;
             }
             """)
             gb_details.configure_column("SCORE", cellStyle=cell_style_jscode)
             
+            # Configure text wrapping for long text columns
+            gb_details.configure_column("FINDING", wrapText=True, autoHeight=True)
+            gb_details.configure_column("ACTION PLAN", wrapText=True, autoHeight=True)
+            
             gridOptions_details = gb_details.build()
+
+            # Calculate dynamic height for the table
+            # Header height is approx 40px, each row is approx 30px
+            # Add a buffer for wrapped text
+            num_rows = len(detail_df)
+            table_height = 100 + (num_rows * 35) 
+            if num_rows > 10: # Cap the height to avoid excessive length
+                table_height = 450
 
             AgGrid(
                 detail_df[display_cols],
                 gridOptions=gridOptions_details,
                 fit_columns_on_grid_load=True,
-                height=400,
+                height=table_height,
                 theme="streamlit",
                 allow_unsafe_jscode=True
             )
-            # *** END OF NEW LOGIC ***
+            # *** END OF UPDATED LOGIC ***
 
             # ======================
             # 📈 PERFORMANCE TREND (NOW LINKED TO SELECTION)
