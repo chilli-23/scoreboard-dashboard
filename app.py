@@ -176,6 +176,12 @@ def main():
 
     gb = GridOptionsBuilder.from_dataframe(system_summary[["SYSTEM", "STATUS", "SCORE"]])
     gb.configure_selection(selection_mode="single", use_checkbox=False)
+    
+    # *** NEW LOGIC ADDED HERE ***
+    # This line enables full row selection highlighting
+    gb.configure_selection(rowMultiSelectWithClick=False, suppressRowClickSelection=False)
+    # *** END OF NEW LOGIC ***
+
     gb.configure_default_column(resizable=True, filter=True, sortable=True)
     gridOptions = gb.build()
 
@@ -185,7 +191,9 @@ def main():
         enable_enterprise_modules=True,
         update_mode=GridUpdateMode.SELECTION_CHANGED,
         fit_columns_on_grid_load=True,
-        height=300
+        height=300,
+        # *** NEW THEME ADDED HERE ***
+        theme="streamlit" # Use a theme that provides better highlighting
     )
 
     # --- Table 2: Equipment Details (only if a system is clicked) ---
