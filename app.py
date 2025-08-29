@@ -203,11 +203,9 @@ def main():
             # Filter the date-ranged data for the selected system
             detail_df = df_filtered_by_date[df_filtered_by_date["SYSTEM"] == selected_system].copy()
             
-            # *** NEW LOGIC ADDED HERE ***
             # Find the latest record for each piece of equipment within that system
             detail_df = detail_df.sort_values(by="DATE", ascending=False)
             detail_df = detail_df.drop_duplicates(subset=["EQUIPMENT DESCRIPTION"], keep="first")
-            # *** END OF NEW LOGIC ***
 
             detail_df["DATE"] = detail_df["DATE"].dt.strftime('%d-%m-%Y')
             detail_df["STATUS"] = detail_df["SCORE"].apply(map_status)
@@ -230,9 +228,11 @@ def main():
     # 📈 PERFORMANCE TREND
     # ======================
     st.subheader("System Performance Trend Over Time")
-    # Use the original, unfiltered dataframe for the trend
-    trend_df = df.groupby(['DATE', 'SYSTEM'])['SCORE'].min().reset_index()
-    trend_systems = sorted(df["SYSTEM"].unique())
+    # *** UPDATED LOGIC HERE ***
+    # Use the date-filtered dataframe for the trend
+    trend_df = df_filtered_by_date.groupby(['DATE', 'SYSTEM'])['SCORE'].min().reset_index()
+    trend_systems = sorted(df_filtered_by_date["SYSTEM"].unique())
+    # *** END OF UPDATED LOGIC ***
     if trend_systems:
         selected_system_trend = st.selectbox("Select System for Trend Line:", trend_systems)
         if selected_system_trend:
