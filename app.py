@@ -221,29 +221,30 @@ def main():
                 detail_df[display_cols].style.map(color_score, subset=["SCORE"]).hide(axis="index"),
                 use_container_width=True
             )
+
+            # ======================
+            # 📈 PERFORMANCE TREND (NOW LINKED TO SELECTION)
+            # ======================
+            st.subheader(f"Performance Trend for {selected_system}")
+            
+            # Use the date-filtered dataframe for the trend
+            trend_df = df_filtered_by_date.groupby(['DATE', 'SYSTEM'])['SCORE'].min().reset_index()
+            
+            # Filter the trend data for the selected system from the AgGrid table
+            trend_df_filtered = trend_df[trend_df["SYSTEM"] == selected_system]
+
+            if not trend_df_filtered.empty:
+                fig_trend = px.line(
+                    trend_df_filtered, x="DATE", y="SCORE", markers=True,
+                    title=f"Performance Trend for {selected_system}"
+                )
+                fig_trend.update_layout(yaxis=dict(title="Score", range=[0.5, 3.5], dtick=1))
+                st.plotly_chart(fig_trend, use_container_width=True)
+            else:
+                st.warning(f"No trend data available for {selected_system} in the selected date range.")
+
     else:
-        st.info("Click a system above to see its latest equipment details within the selected date range.")
-
-    # ======================
-    # 📈 PERFORMANCE TREND
-    # ======================
-    st.subheader("System Performance Trend Over Time")
-    # *** UPDATED LOGIC HERE ***
-    # Use the date-filtered dataframe for the trend
-    trend_df = df_filtered_by_date.groupby(['DATE', 'SYSTEM'])['SCORE'].min().reset_index()
-    trend_systems = sorted(df_filtered_by_date["SYSTEM"].unique())
-    # *** END OF UPDATED LOGIC ***
-    if trend_systems:
-        selected_system_trend = st.selectbox("Select System for Trend Line:", trend_systems)
-        if selected_system_trend:
-            trend_df_filtered = trend_df[trend_df["SYSTEM"] == selected_system_trend]
-
-            fig_trend = px.line(
-                trend_df_filtered, x="DATE", y="SCORE", markers=True,
-                title=f"Performance Trend for {selected_system_trend}"
-            )
-            fig_trend.update_layout(yaxis=dict(title="Score", range=[0.5, 3.5], dtick=1))
-            st.plotly_chart(fig_trend, use_container_width=True)
+        st.info("Click a system above to see its latest equipment details and performance trend.")
 
 
 if __name__ == "__main__":
