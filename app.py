@@ -177,9 +177,11 @@ def main():
     gb = GridOptionsBuilder.from_dataframe(system_summary[["SYSTEM", "STATUS", "SCORE"]])
     gb.configure_selection(selection_mode="single", use_checkbox=False)
     gb.configure_selection(rowMultiSelectWithClick=False, suppressRowClickSelection=False)
-    # *** UPDATED: Columns are no longer resizable by the user ***
     gb.configure_default_column(resizable=False, filter=True, sortable=True)
     gridOptions = gb.build()
+    
+    # *** UPDATED: Prevent columns from being moved ***
+    gridOptions['suppressMovableColumns'] = True
 
     grid_response = AgGrid(
         system_summary,
@@ -224,7 +226,6 @@ def main():
             
             gb_details.configure_selection(selection_mode="single", use_checkbox=False, rowMultiSelectWithClick=False, suppressRowClickSelection=False)
             
-            # *** UPDATED: Columns are no longer resizable by the user ***
             gb_details.configure_default_column(resizable=False)
 
             # Add cell styling for the 'STATUS' column based on text
@@ -244,6 +245,9 @@ def main():
             gb_details.configure_column("ACTION PLAN", width=400, wrapText=True, autoHeight=True)
             
             gridOptions_details = gb_details.build()
+
+            # *** UPDATED: Prevent columns from being moved ***
+            gridOptions_details['suppressMovableColumns'] = True
 
             # Calculate dynamic height for the table
             num_rows = len(detail_df)
@@ -275,9 +279,9 @@ def main():
                     trend_df_filtered, x="DATE", y="SCORE", markers=True,
                     title=f"Performance Trend for {selected_system}"
                 )
-                # *** UPDATED: Format the x-axis date to dd/mm/yy ***
-                fig_trend.update_xaxes(tickformat="%d/%m/%y")
-                fig_trend.update_layout(yaxis=dict(title="Score", range=[0.5, 3.5], dtick=1))
+                # *** UPDATED: Format x-axis and fix range to prevent panning ***
+                fig_trend.update_xaxes(tickformat="%d/%m/%y", fixedrange=True)
+                fig_trend.update_layout(yaxis=dict(title="Score", range=[0.5, 3.5], dtick=1, fixedrange=True))
                 st.plotly_chart(fig_trend, use_container_width=True)
             else:
                 st.warning(f"No trend data available for {selected_system} in the selected date range.")
