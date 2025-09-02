@@ -56,7 +56,7 @@ def main():
     if 'clicked_trend_point' not in st.session_state:
         st.session_state.clicked_trend_point = None
 
-    RAW_FILE_URL = "https://raw.githubusercontent.com/AlvinWinarta2111/equipment-monitoring-dashboard/main/data/CONDITION%20MONITORING%20SCORECARD.xlsx"
+    RAW_FILE_URL = "https://github.com/chilli-23/scoreboard-dashboard/blob/main/data/CONDITION%20MONITORING%20SCORECARD.xlsx"
 
     @st.cache_data(ttl=300)
     def load_data():
@@ -264,3 +264,4 @@ if __name__ == "__main__":
     main()
 
 where does this code look for the xlsx file?
+
