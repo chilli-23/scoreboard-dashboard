@@ -212,16 +212,22 @@ def main():
             gridOptions_action['domLayout'] = 'autoHeight'
             AgGrid(action_detail_df, gridOptions=gridOptions_action, theme="streamlit", fit_columns_on_grid_load=True, allow_unsafe_jscode=True)
             
-            # --- FIXED Performance Trend ---
+            # --- Performance Trend (UPDATED) ---
             st.subheader(f"Performance Trend for {selected_equip_name}")
+            
             df_equip = df_filtered_by_date[df_filtered_by_date["EQUIPMENT DESCRIPTION"] == selected_equip_name].copy()
             if not df_equip.empty:
                 df_equip = df_equip.sort_values("DATE")
-                fig_trend = px.line(df_equip, x="DATE", y="SCORE", markers=True)
+                
+                fig_trend = px.line(
+                    df_equip, x="DATE", y="SCORE", markers=True,
+                    line_shape="hv"  # step-like, keeps score levels flat until next change
+                )
                 fig_trend.update_xaxes(tickformat="%d/%m/%y", fixedrange=True)
                 fig_trend.update_layout(yaxis=dict(title="Score", range=[0.5, 3.5], dtick=1, fixedrange=True))
+                
                 st.plotly_chart(fig_trend, use_container_width=True)
-
+            
                 selected_points = plotly_events(
                     fig_trend,
                     click_event=True,
@@ -231,9 +237,11 @@ def main():
                 if selected_points:
                     clicked_date_str = selected_points[0]['x']
                     clicked_date = pd.to_datetime(clicked_date_str).normalize()
+                    
                     selected_row = df_equip[df_equip['DATE'].dt.normalize() == clicked_date].iloc[0]
                     
                     st.subheader(f"Details for {selected_equip_name} on {selected_row['DATE'].strftime('%d-%m-%Y')}")
+                    
                     st.markdown(f"**Score:** {selected_row['SCORE']}")
                     st.markdown(f"**Status:** {selected_row['EQUIP_STATUS']}")
                     st.markdown(f"**Finding:** {selected_row.get('FINDING', 'N/A')}")
