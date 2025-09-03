@@ -224,7 +224,6 @@ def main():
                     y="SCORE",
                     title=f"Score Trend for {selected_equip_name}",
                     labels={"SCORE": "Score"},
-                    markers=True
                 )
                 fig_trend.update_xaxes(tickformat="%d/%m/%y", fixedrange=True)
                 fig_trend.update_layout(yaxis=dict(title="Score", range=[0.5, 3.5], dtick=1, fixedrange=True))
@@ -260,3 +259,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
