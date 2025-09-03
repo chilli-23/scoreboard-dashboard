@@ -16,10 +16,26 @@ def load_data():
 
 df = load_data()
 
-# Make sure Date column is datetime
-df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
+# -------------------------------
+# Normalize column names
+# -------------------------------
+df.columns = df.columns.str.strip().str.lower()
 
 st.title("📊 Condition Monitoring Dashboard")
+st.write("✅ Loaded columns:", df.columns.tolist())
+
+# -------------------------------
+# Check required columns
+# -------------------------------
+required_cols = ["date", "score", "equipment"]
+missing = [c for c in required_cols if c not in df.columns]
+
+if missing:
+    st.error(f"❌ Missing required columns in Excel: {missing}")
+    st.stop()
+
+# Ensure date column is datetime
+df["date"] = pd.to_datetime(df["date"], errors="coerce")
 
 # -------------------------------
 # Static Trend Line
@@ -28,9 +44,9 @@ st.subheader("Static Trend Line")
 
 fig_static = px.line(
     df,
-    x="Date",
-    y="Score",
-    color="Equipment",
+    x="date",
+    y="score",
+    color="equipment",
     markers=True,
     title="Condition Monitoring Trend (Static)"
 )
@@ -43,9 +59,9 @@ st.subheader("Interactive Trend Line (click legend to toggle)")
 
 fig_interactive = px.line(
     df,
-    x="Date",
-    y="Score",
-    color="Equipment",
+    x="date",
+    y="score",
+    color="equipment",
     markers=True,
     title="Condition Monitoring Trend (Interactive)"
 )
