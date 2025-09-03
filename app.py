@@ -8,26 +8,34 @@ import io
 # Load Data
 # ==============================
 @st.cache_data
-def load_data():
-    url = "https://YOUR_FILE_URL_HERE"  # 🔹 Replace with your actual Excel file URL
+def load_data(file=None, url=None):
+    df = None
 
-    response = requests.get(url)
-    if response.status_code != 200:
-        st.error("❌ Could not fetch the Excel file. Please check the URL.")
+    # Case 1: User uploads file
+    if file is not None:
+        df = pd.read_excel(file)
+
+    # Case 2: Try URL if no file uploaded
+    elif url is not None:
+        try:
+            response = requests.get(url, timeout=10)
+            response.raise_for_status()
+            file_bytes = io.BytesIO(response.content)
+
+            # Get available sheets
+            xls = pd.ExcelFile(file_bytes)
+            sheet_name = "scorecard"
+            if sheet_name not in xls.sheet_names:
+                st.warning(f"⚠️ Sheet '{sheet_name}' not found, using '{xls.sheet_names[0]}' instead.")
+                sheet_name = xls.sheet_names[0]
+
+            df = pd.read_excel(file_bytes, sheet_name=sheet_name)
+        except Exception as e:
+            st.error(f"❌ Could not load data from URL: {e}")
+            return None
+
+    if df is None:
         return None
-
-    file_bytes = io.BytesIO(response.content)
-
-    # Check available sheets
-    xls = pd.ExcelFile(file_bytes)
-    st.write("Available sheets:", xls.sheet_names)
-
-    sheet_name = "scorecard"  # default expected sheet
-    if sheet_name not in xls.sheet_names:
-        st.warning(f"⚠️ Sheet '{sheet_name}' not found, using '{xls.sheet_names[0]}' instead.")
-        sheet_name = xls.sheet_names[0]
-
-    df = pd.read_excel(file_bytes, sheet_name=sheet_name)
 
     # Standardize column names
     df = df.rename(columns={
@@ -37,8 +45,10 @@ def load_data():
     })
 
     # Convert types
-    df["SCORE"] = pd.to_numeric(df["SCORE"], errors="coerce")
-    df["DATE"] = pd.to_datetime(df["DATE"], errors="coerce")
+    if "SCORE" in df.columns:
+        df["SCORE"] = pd.to_numeric(df["SCORE"], errors="coerce")
+    if "DATE" in df.columns:
+        df["DATE"] = pd.to_datetime(df["DATE"], errors="coerce")
 
     return df
 
@@ -49,9 +59,13 @@ def main():
     st.set_page_config(page_title="📊 Condition Monitoring Scorecard Dashboard", layout="wide")
     st.title("📊 Condition Monitoring Scorecard Dashboard")
 
-    df = load_data()
+    # Upload or URL option
+    uploaded_file = st.sidebar.file_uploader("Upload Excel file", type=["xlsx"])
+    url_input = st.sidebar.text_input("Or enter file URL", "https://raw.githubusercontent.com/chilli-23/scoreboard-dashboard/main/data/CONDITION%20MONITORING%20SCORECARD.xlsx")
+
+    df = load_data(uploaded_file, url_input)
     if df is None:
-        return
+        st.stop()
 
     # Sidebar filters
     equipment_list = df["EQUIPMENT"].dropna().unique()
@@ -60,7 +74,7 @@ def main():
     # Filter data
     df_equip = df[df["EQUIPMENT"] == selected_equipment]
 
-    # Show trendline (simple non-interactive)
+    # Show trendline (simple)
     st.subheader(f"📈 Trendline for {selected_equipment}")
     fig_trend = px.line(
         df_equip,
@@ -71,7 +85,7 @@ def main():
     )
     st.plotly_chart(fig_trend, use_container_width=True)
 
-    # Date filter (Year + Month → Dates)
+    # Year-Month filter
     df_equip["Year"] = df_equip["DATE"].dt.year
     df_equip["Month"] = df_equip["DATE"].dt.month
 
